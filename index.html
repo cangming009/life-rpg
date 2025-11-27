@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>生活西游 - 自律飞升版</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #2ecc71;
+            --bg: #1a1a2e;
+            --card: #16213e;
+            --text: #ecf0f1;
+            --nav-height: 60px;
+        }
+
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #000; /* 电脑端背景全黑 */
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center; /* 电脑端居中 */
+            overflow: hidden;
+        }
+
+        /* --- 核心容器：模拟手机屏幕 --- */
+        #app-container {
+            width: 100%;
+            max-width: 500px; /* 电脑端最大宽度限制 */
+            height: 100%;
+            background-color: var(--bg);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 30px rgba(50, 50, 50, 0.5); /* 电脑端加个阴影更有质感 */
+        }
+
+        /* --- 顶部信息栏 --- */
+        .top-bar {
+            background: rgba(22, 33, 62, 0.95);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+        .res-box { font-size: 15px; font-weight: bold; display: flex; align-items: center; gap: 5px;}
+        .coin-icon { color: var(--warning); }
+
+        /* --- 主内容区域 (滚动) --- */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 15px;
+            padding-bottom: calc(var(--nav-height) + 20px); /* 底部留白，防止被导航栏遮挡 */
+            /* 隐藏滚动条但保留功能 */
+            scrollbar-width: none; 
+            -ms-overflow-style: none;
+        }
+        .main-content::-webkit-scrollbar { display: none; }
+
+        /* 通用卡片样式 */
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            border: 1px solid #2c3e50;
+        }
+        .card-title {
+            margin: 0 0 12px 0;
+            font-size: 17px;
+            color: var(--primary);
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 属性条 */
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; color: #ccc;}
+        .progress-bg { background: #333; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 8px;}
+        .progress-fill { height: 100%; transition: width 0.3s ease; border-radius: 5px; }
+
+        /* 任务按钮网格 */
+        .grid-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .action-btn {
+            background: linear-gradient(145deg, #2c3e50, #34495e);
+            border: none;
+            color: white;
+            padding: 16px 10px;
+            border-radius: 10px;
+            font-size: 15px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .action-btn:active { transform: scale(0.96); }
+        .action-btn.disabled { opacity: 0.7; cursor: not-allowed; }
+        .btn-sub { font-size: 11px; color: #aaa; margin-top: 5px; }
+        .btn-cooldown {
+            position: absolute; bottom: 0; left: 0; height: 4px; background: rgba(255,255,255,0.6); width: 0%;
+        }
+
+        /* 商店与列表 */
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px dashed #333;
+        }
+        .item-row:last-child { border-bottom: none; }
+        .item-info h4 { margin: 0; font-size: 15px; color: #fff; }
+        .item-info p { margin: 4px 0 0; font-size: 12px; color: #7f8c8d; }
+        .btn-buy {
+            background: var(--warning);
+            color: #1a1a1a;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            min-width: 70px;
+        }
+        .btn-buy:disabled { background: #444; color: #888; }
+
+        /* 战斗区域 */
+        .battle-log {
+            height: 180px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #444;
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+        .log-line { margin-bottom: 6px; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px;}
+        .c-red { color: #ff6b6b; } .c-green { color: #51cf66; } .c-yellow { color: #fcc419; }
+
+        /* --- 底部导航栏 --- */
+        .nav-bar {
+            position: absolute; /* 相对于app-container定位 */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: var(--nav-height);
+            background: #101524;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid #333;
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #57606f;
+            cursor: pointer;
+            flex: 1;
+            height: 100%;
+        }
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 22px; margin-bottom: 3px; }
+
+        /* Tab 显示控制 */
+        .tab-content { display: none; animation: fadeIn 0.2s ease-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <!-- 响应式外壳容器 -->
+    <div id="app-container">
+        
+        <!-- 顶部资源 -->
+        <div class="top-bar">
+            <div class="res-box">🔰 LV.<span id="ui-lv">1</span> <span id="ui-name" style="margin-left:5px">家长侠</span></div>
+            <div class="res-box"><span class="coin-icon">🟡</span> <span id="ui-gold">0</span></div>
+        </div>
+
+        <!-- 1. 修行（首页） -->
+        <div id="tab-home" class="main-content tab-content active">
+            <!-- 角色属性卡 -->
+            <div class="card">
+                <h3 class="card-title">当前状态</h3>
+                <div class="stat-row">
+                    <span>❤️ 生命值</span>
+                    <span id="ui-hp-text">100/100</span>
+                </div>
+                <div class="progress-bg"><div id="ui-hp-bar" class="progress-fill" style="background:var(--danger); width:100%"></div></div>
+                
+                <div class="stat-row">
+                    <span>⚡ 经验值</span>
+                    <span id="ui-exp-text">0/100</span>
+                </div>
+                <div class="progress-bg"><div id="ui-exp-bar" class="progress-fill" style="background:var(--success); width:0%"></div></div>
+                
+                <div class="stat-row" style="margin-top:5px; border-top:1px solid #333; padding-top:5px">
+                    <span>⚔️ 总攻击力: <span id="ui-atk" style="color:var(--warning)">10</span></span>
+                    <span>🛡️ 装备加成: <span id="ui-gear-bonus">0</span></span>
+                </div>
+            </div>
+
+            <!-- 现实任务卡 -->
+            <div class="card">
+                <h3 class="card-title">现实修行 <span style="font-size:12px; color:#777">点击打卡</span></h3>
+                <div class="grid-actions">
+                    <button class="action-btn" onclick="doTask('diet', this)">
+                        <div>🥗 坚持减肥</div>
+                        <div class="btn-sub">Exp+20 金币+15</div>
+                        <div class="btn-cooldown"></div>
+                    </button>
+                    <button class="action-btn" onclick="doTask('study', this)">
+                        <div>📚 辅导作业</div>
+                        <div class="btn-sub">Exp+30 金币+25</div>
+                        <div class="btn-cooldown"></div>
+                    </button>
+                    <button class="action-btn" onclick="doTask('clean', this)">
+                        <div>🧹 收拾家务</div>
+                        <div class="btn-sub">Exp+15 金币+10</div>
+                        <div class="btn-cooldown"></div>
+                    </button>
+                    <button class="action-btn" onclick="doTask('sport', this)">
+                        <div>🏃 健身运动</div>
+                        <div class="btn-sub">Exp+40 金币+30</div>
+                        <div class="btn-cooldown"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 商店 -->
+        <div id="tab-shop" class="main-content tab-content">
+            <div class="card">
+                <h3 class="card-title">神奇百货</h3>
+                <div id="shop-list">
+                    <!-- JS 生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 背包 -->
+        <div id="tab-bag" class="main-content tab-content">
+            <div class="card">
+                <h3 class="card-title">我的装备</h3>
+                <div id="inventory-list">
+                    <div style="text-align:center; padding:20px; color:#666;">
+                        <div style="font-size:30px; margin-bottom:10px">🎒</div>
+                        暂无装备，快去商店看看吧
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 战斗 -->
+        <div id="tab-battle" class="main-content tab-content">
+            <div class="card">
+                <h3 class="card-title">挑战心魔</h3>
+                <div style="text-align:center; margin-bottom:15px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px;">
+                    <h2 id="boss-name" style="margin:5px 0; color:var(--danger); font-size:18px;">BOSS</h2>
+                    <div class="progress-bg" style="height:12px; margin-top:8px;">
+                        <div id="boss-hp-bar" class="progress-fill" style="background:var(--danger); width:100%"></div>
+                    </div>
+                    <div style="font-size:12px; margin-top:5px; color:#aaa;">HP: <span id="boss-hp">100</span></div>
+                </div>
+
+                <div class="battle-log" id="battle-log">
+                    <div class="log-line c-yellow">准备战斗...</div>
+                </div>
+
+                <div class="grid-actions">
+                    <button class="action-btn" style="background:var(--danger); min-height:60px" onclick="battleAction('attack')">
+                        👊 普通攻击
+                    </button>
+                    <button class="action-btn" style="background:#8e44ad; min-height:60px" onclick="battleAction('skill')">
+                        ✨ 必杀技 (耗血)
+                    </button>
+                </div>
+                
+                <div style="margin-top:15px; text-align:center;">
+                    <button onclick="nextStage()" id="btn-next-stage" style="display:none; width:100%; padding:15px; background:var(--success); border:none; color:white; border-radius:8px; font-weight:bold; font-size:16px;">
+                        🎉 胜利！挑战下一关
+                    </button>
+                    <button onclick="resetBattle()" id="btn-retry" style="display:none; width:100%; padding:15px; background:#7f8c8d; border:none; color:white; border-radius:8px; font-weight:bold; font-size:16px;">
+                        💀 失败... 满血复活
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部导航 -->
+        <nav class="nav-bar">
+            <div class="nav-item active" onclick="switchTab('home', this)">
+                <span class="nav-icon">🧘</span>
+                <span>修行</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('shop', this)">
+                <span class="nav-icon">🛒</span>
+                <span>商店</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('bag', this)">
+                <span class="nav-icon">🎒</span>
+                <span>背包</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('battle', this)">
+                <span class="nav-icon">⚔️</span>
+                <span>闯关</span>
+            </div>
+        </nav>
+    
+    </div> <!-- End App Container -->
+
+<script>
+    // --- 游戏配置 ---
+    const GAME_CONFIG = {
+        shopItems: [
+            { id: 1, name: "静心口服液", desc: "攻击力 +5", price: 100, type: "atk", val: 5 },
+            { id: 2, name: "瑜伽垫", desc: "生命上限 +50", price: 200, type: "hp", val: 50 },
+            { id: 3, name: "五年高考三年模拟", desc: "攻击力 +15", price: 500, type: "atk", val: 15 },
+            { id: 4, name: "降噪耳机", desc: "生命上限 +150", price: 800, type: "hp", val: 150 },
+            { id: 5, name: "戒尺", desc: "攻击力 +40", price: 2000, type: "atk", val: 40 },
+            { id: 6, name: "全自动扫地机", desc: "生命 +300", price: 3500, type: "hp", val: 300 },
+            { id: 7, name: "快乐肥宅水", desc: "全属性 +100", price: 5000, type: "all", val: 100 }
+        ],
+        monsters: [
+            { name: "手机诱惑怪", hp: 100, atk: 8 },
+            { name: "沙发土豆精", hp: 300, atk: 15 },
+            { name: "作业拖延魔", hp: 600, atk: 25 },
+            { name: "起床困难症", hp: 1200, atk: 40 },
+            { name: "中年危机兽", hp: 3000, atk: 80 },
+            { name: "最终BOSS: 完美的自己", hp: 9999, atk: 200 }
+        ]
+    };
+
+    let player = {
+        level: 1, exp: 0, maxExp: 100, gold: 0,
+        baseHp: 100, curHp: 100, baseAtk: 10,
+        inventory: [], stage: 1
+    };
+
+    let battleState = { inBattle: false, enemy: null };
+
+    // --- 初始化 ---
+    function init() {
+        loadData();
+        renderUI();
+        renderShop();
+        renderInventory();
+        prepareBattle();
+    }
+
+    // --- 核心逻辑 ---
+    function doTask(type, btn) {
+        if (btn.classList.contains('disabled')) return;
+        
+        // 冷却UI处理
+        btn.classList.add('disabled');
+        const cooldownBar = btn.querySelector('.btn-cooldown');
+        cooldownBar.style.transition = 'width 2s linear';
+        cooldownBar.style.width = '100%';
+
+        let gainExp = 0, gainGold = 0;
+        switch(type) {
+            case 'diet': gainExp = 20; gainGold = 15; break;
+            case 'study': gainExp = 30; gainGold = 25; break;
+            case 'clean': gainExp = 15; gainGold = 10; break;
+            case 'sport': gainExp = 40; gainGold = 30; break;
+        }
+
+        player.exp += gainExp;
+        player.gold += gainGold;
+        player.curHp = getTotalHp(); // 任务回血
+        
+        checkLevelUp();
+        saveData();
+        renderUI();
+
+        setTimeout(() => {
+            btn.classList.remove('disabled');
+            cooldownBar.style.transition = 'none';
+            cooldownBar.style.width = '0%';
+        }, 2000);
+    }
+
+    function checkLevelUp() {
+        if (player.exp >= player.maxExp) {
+            player.level++;
+            player.exp -= player.maxExp;
+            player.maxExp = Math.floor(player.maxExp * 1.5);
+            player.baseHp += 20;
+            player.baseAtk += 5;
+            player.curHp = getTotalHp();
+            alert(`恭喜升级！当前等级 LV.${player.level}`);
+        }
+    }
+
+    function buyItem(id) {
+        const item = GAME_CONFIG.shopItems.find(i => i.id === id);
+        if (player.inventory.includes(id)) return;
+        if (player.gold < item.price) {
+            alert("自律币不足！");
+            return;
+        }
+        if(confirm(`购买【${item.name}】?`)) {
+            player.gold -= item.price;
+            player.inventory.push(id);
+            saveData();
+            renderUI();
+            renderShop();
+            renderInventory();
+        }
+    }
+
+    function getTotalHp() {
+        let bonus = 0;
+        player.inventory.forEach(id => {
+            const item = GAME_CONFIG.shopItems.find(i => i.id === id);
+            if (item.type === 'hp' || item.type === 'all') bonus += item.val;
+        });
+        return player.baseHp + bonus;
+    }
+
+    function getTotalAtk() {
+        let bonus = 0;
+        player.inventory.forEach(id => {
+            const item = GAME_CONFIG.shopItems.find(i => i.id === id);
+            if (item.type === 'atk' || item.type === 'all') bonus += item.val;
+        });
+        return player.baseAtk + bonus;
+    }
+
+    // --- 战斗 ---
+    function prepareBattle() {
+        const stageIdx = Math.min(player.stage - 1, GAME_CONFIG.monsters.length - 1);
+        const template = GAME_CONFIG.monsters[stageIdx];
+        const loopCount = Math.floor((player.stage - 1) / GAME_CONFIG.monsters.length);
+        const multiplier = 1 + (loopCount * 0.5);
+
+        battleState.enemy = {
+            name: template.name + (loopCount > 0 ? `+${loopCount}` : ""),
+            hp: Math.floor(template.hp * multiplier),
+            maxHp: Math.floor(template.hp * multiplier),
+            atk: Math.floor(template.atk * multiplier)
+        };
+        
+        battleState.inBattle = true;
+        document.getElementById('boss-name').innerText = `第${player.stage}关：${battleState.enemy.name}`;
+        updateBattleUI();
+        document.getElementById('battle-log').innerHTML = '<div class="log-line c-yellow">遭遇敌人！</div>';
+        document.getElementById('btn-next-stage').style.display = 'none';
+        document.getElementById('btn-retry').style.display = 'none';
+        
+        if(player.curHp <= 0) player.curHp = getTotalHp();
+    }
+
+    function battleAction(type) {
+        if (!battleState.inBattle || player.curHp <= 0 || battleState.enemy.hp <= 0) return;
+
+        const log = document.getElementById('battle-log');
+        const pAtk = getTotalAtk();
+        
+        // Player Turn
+        let damage = 0;
+        if (type === 'attack') {
+            damage = Math.floor(pAtk * (0.9 + Math.random() * 0.2));
+            log.innerHTML += `<div class="log-line">你攻击BOSS <span class="c-green">-${damage}</span></div>`;
+        } else if (type === 'skill') {
+            const cost = Math.floor(getTotalHp() * 0.1);
+            if (player.curHp <= cost) {
+                log.innerHTML += `<div class="log-line c-red">体力不足！</div>`;
+                log.scrollTop = log.scrollHeight;
+                return;
+            }
+            player.curHp -= cost;
+            damage = Math.floor(pAtk * 2.5);
+            log.innerHTML += `<div class="log-line c-yellow">必杀一击！BOSS <span class="c-green">-${damage}</span></div>`;
+        }
+
+        battleState.enemy.hp -= damage;
+        updateBattleUI();
+
+        if (battleState.enemy.hp <= 0) {
+            winBattle();
+            return;
+        }
+
+        // Enemy Turn
+        setTimeout(() => {
+            if(battleState.enemy.hp <= 0) return;
+            const eDmg = Math.max(1, battleState.enemy.atk - Math.floor(player.level/2));
+            player.curHp -= eDmg;
+            log.innerHTML += `<div class="log-line">BOSS反击 <span class="c-red">-${eDmg}</span></div>`;
+            updateBattleUI();
+            log.scrollTop = log.scrollHeight;
+
+            if (player.curHp <= 0) loseBattle();
+        }, 300);
+
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function updateBattleUI() {
+        const ePct = Math.max(0, (battleState.enemy.hp / battleState.enemy.maxHp) * 100);
+        document.getElementById('boss-hp-bar').style.width = ePct + '%';
+        document.getElementById('boss-hp').innerText = Math.max(0, battleState.enemy.hp);
+        renderUI();
+    }
+
+    function winBattle() {
+        battleState.inBattle = false;
+        document.getElementById('battle-log').innerHTML += `<div class="log-line c-green">胜利！</div>`;
+        document.getElementById('btn-next-stage').style.display = 'block';
+        document.getElementById('battle-log').scrollTop = 999;
+    }
+
+    function loseBattle() {
+        battleState.inBattle = false;
+        document.getElementById('battle-log').innerHTML += `<div class="log-line c-red">失败...</div>`;
+        document.getElementById('btn-retry').style.display = 'block';
+        document.getElementById('battle-log').scrollTop = 999;
+    }
+
+    function nextStage() { player.stage++; saveData(); prepareBattle(); }
+    function resetBattle() { player.curHp = getTotalHp(); renderUI(); prepareBattle(); }
+
+    // --- UI/System ---
+    function renderUI() {
+        document.getElementById('ui-lv').innerText = player.level;
+        document.getElementById('ui-gold').innerText = player.gold;
+        
+        const maxHp = getTotalHp();
+        const curHp = Math.max(0, player.curHp);
+        document.getElementById('ui-hp-text').innerText = `${curHp}/${maxHp}`;
+        document.getElementById('ui-hp-bar').style.width = (curHp/maxHp*100) + '%';
+        document.getElementById('ui-exp-text').innerText = `${player.exp}/${player.maxExp}`;
+        document.getElementById('ui-exp-bar').style.width = (player.exp/player.maxExp*100) + '%';
+        document.getElementById('ui-atk').innerText = getTotalAtk();
+        document.getElementById('ui-gear-bonus').innerText = `+${getTotalAtk()-player.baseAtk}攻 / +${getTotalHp()-player.baseHp}血`;
+    }
+
+    function renderShop() {
+        const list = document.getElementById('shop-list');
+        list.innerHTML = "";
+        GAME_CONFIG.shopItems.forEach(item => {
+            const isOwned = player.inventory.includes(item.id);
+            list.innerHTML += `
+                <div class="item-row">
+                    <div class="item-info">
+                        <h4>${item.name}</h4>
+                        <p>${item.desc}</p>
+                    </div>
+                    <button class="btn-buy" ${isOwned ? 'disabled' : ''} onclick="buyItem(${item.id})">
+                        ${isOwned ? '已有' : '💰'+item.price}
+                    </button>
+                </div>`;
+        });
+    }
+
+    function renderInventory() {
+        const list = document.getElementById('inventory-list');
+        if (player.inventory.length === 0) {
+            list.innerHTML = '<div style="text-align:center;padding:20px;color:#666">🎒 空空如也</div>';
+            return;
+        }
+        list.innerHTML = "";
+        player.inventory.forEach(id => {
+            const item = GAME_CONFIG.shopItems.find(i => i.id === id);
+            list.innerHTML += `<div class="item-row"><div class="item-info"><h4 class="c-green">${item.name}</h4><p>${item.desc}</p></div><span style="font-size:12px;color:#666">生效中</span></div>`;
+        });
+    }
+
+    function switchTab(tab, nav) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        nav.classList.add('active');
+    }
+
+    function saveData() { localStorage.setItem('lifeRpgV3', JSON.stringify(player)); }
+    function loadData() {
+        const saved = localStorage.getItem('lifeRpgV3');
+        if (saved) player = { ...player, ...JSON.parse(saved) };
+    }
+
+    init();
+</script>
+</body>
+</html>
